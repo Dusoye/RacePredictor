@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from multiprocessing import Pool, cpu_count
 import multiprocessing
+from tqdm import tqdm
 
 # Ensure all functions are defined at the module level
 
@@ -52,8 +53,13 @@ def process_dataset_parallel(data, n_jobs=None):
     
     grouped = [group for _, group in data.groupby('Runner ID')]
     
-    with Pool(n_jobs) as pool:
-        results = pool.map(process_runner_group, grouped)
+    with tqdm(total=len(grouped), desc="Processing Groups") as pbar:
+        with Pool(n_jobs) as pool:
+            # Update the progress bar after each group's processing
+            results = []
+            for result in pool.imap_unordered(process_runner_group, grouped):
+                results.append(result)
+                pbar.update()
     
     return pd.concat(results, ignore_index=True)
 
@@ -68,6 +74,3 @@ if __name__ == '__main__':
     # Process the data
     processed_data = process_dataset_parallel(data)
     processed_data.to_csv('./output/aggdata.csv', index=False)
-
-    # Do something with the processed data
-    print(processed_data.head())
